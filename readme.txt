@@ -3,7 +3,7 @@ Contributors: bracket
 Tags: post order, custom order, drag and drop, taxonomy order, reorder
 Requires at least: 6.2
 Tested up to: 6.9
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -22,7 +22,7 @@ A key feature is **per-term post ordering**: the ability to define a different p
 Drag-and-drop to reorder posts, pages, and custom post types on the standard admin list table. The new order is saved to `menu_order` and automatically applied on the front end.
 
 **2. Per-Term Post Ordering**
-Filter your admin list by a category or taxonomy term, and the interface switches to per-term mode. Drag posts into the order you want for *that specific term*. Assign the same post to multiple categories — each one keeps its own sort. New posts added to a term automatically appear at the end of the custom order.
+Filter your admin list by a category or taxonomy term, and the interface switches to per-term mode. Drag posts into the order you want for *that specific term*. Assign the same post to multiple categories — each one keeps its own sort. New posts added to a term automatically appear first (newest on top).
 
 **3. Taxonomy Term Ordering**
 Reorder categories, tags, and custom taxonomy terms themselves via drag-and-drop on the native `edit-tags.php` screen. The new term order is applied to `get_terms()` queries and navigation menus on the front end.
@@ -103,7 +103,7 @@ To apply per-term order in custom queries, set `orderby` to `menu_order` and inc
     ] ],
 ] );`
 
-The plugin will automatically apply the saved per-term order via `FIELD()` SQL — posts not in the saved order appear at the end.
+The plugin will automatically apply the saved per-term order via `FIELD()` SQL — posts not in the saved order appear first (newest on top).
 
 == Installation ==
 
@@ -189,7 +189,7 @@ Yes. Elementor, Divi, Beaver Builder, and other page builders that use standard 
 
 = What happens when I add a new post to a category that has a custom order? =
 
-New posts that aren't part of the saved per-term order automatically appear at the end. You can then go to the admin, filter by that term, and drag the new post into position.
+New posts that aren't part of the saved per-term order automatically appear first (sorted by date, newest on top). You can then go to the admin, filter by that term, and drag the new post into position.
 
 = Is it compatible with Simple Custom Post Order (SCPO)? =
 
@@ -209,6 +209,9 @@ Yes. The plugin works on individual sites within a multisite network. Each site 
 6. Undo — "Order saved. Undo" notice after every reorder
 
 == Changelog ==
+
+= 1.2.3 =
+* Fixed: New posts added to a term with per-term ordering now appear first instead of last
 
 = 1.1.0 =
 * New: Settings link on the Plugins page for quick access

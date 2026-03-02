@@ -161,9 +161,9 @@ class Bracket_PO_Query {
 
 		global $wpdb;
 
-		// Build FIELD() clause — posts not in the list appear at end
+		// Build FIELD() clause — new/unordered posts appear first (by date), then saved order
 		$ids_str = implode( ',', array_map( 'absint', $ordered_ids ) );
-		$clauses['orderby'] = "FIELD({$wpdb->posts}.ID, {$ids_str}) = 0, FIELD({$wpdb->posts}.ID, {$ids_str}) ASC";
+		$clauses['orderby'] = "FIELD({$wpdb->posts}.ID, {$ids_str}) > 0, FIELD({$wpdb->posts}.ID, {$ids_str}) ASC, {$wpdb->posts}.post_date DESC";
 
 		return $clauses;
 	}

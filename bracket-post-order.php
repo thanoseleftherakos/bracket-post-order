@@ -3,7 +3,7 @@
  * Plugin Name:       Bracket Post Order
  * Plugin URI:        https://wordpress.org/plugins/bracket-post-order/
  * Description:       Drag-and-drop post ordering with per-taxonomy-term support. Reorder posts globally or within specific categories/tags.
- * Version:           1.2.2
+ * Version:           1.2.3
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Bracket
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BRACKET_PO_VERSION', '1.2.2' );
+define( 'BRACKET_PO_VERSION', '1.2.3' );
 define( 'BRACKET_PO_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRACKET_PO_URL', plugin_dir_url( __FILE__ ) );
 
