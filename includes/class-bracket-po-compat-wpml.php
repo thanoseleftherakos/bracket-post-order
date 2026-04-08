@@ -40,7 +40,9 @@ class Bracket_PO_Compat_WPML {
 		}
 
 		// Map term to default language to get the canonical saved order.
-		$default_term_id = apply_filters( 'wpml_object_id', $term_id, 'category', true, $default_language );
+		$term_obj = get_term( $term_id );
+		$term_taxonomy = $term_obj && ! is_wp_error( $term_obj ) ? $term_obj->taxonomy : 'category';
+		$default_term_id = apply_filters( 'wpml_object_id', $term_id, $term_taxonomy, true, $default_language );
 
 		if ( $default_term_id && $default_term_id !== $term_id ) {
 			// Get order from the default language term.

@@ -27,6 +27,14 @@ class Bracket_PO_Admin {
 	 * @param WP_Post $post    Post object.
 	 */
 	public static function mark_stale( $post_id, $post ) {
+		// Skip autosaves and revisions — they don't affect ordering.
+		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+		if ( $post->post_status === 'auto-draft' ) {
+			return;
+		}
+
 		$enabled = Bracket_PO_Core::get_enabled_post_types();
 		if ( in_array( $post->post_type, $enabled, true ) ) {
 			set_transient( 'bracket_po_stale_' . $post->post_type, 1, HOUR_IN_SECONDS );
@@ -53,9 +61,14 @@ class Bracket_PO_Admin {
 	 * Refresh menu_order on admin_init only for stale post types.
 	 *
 	 * Only runs when a transient flag exists, then deletes it.
-	 * Eliminates 2 SQL queries per enabled post type on every admin page load.
+	 * Skips AJAX requests to avoid corrupting concurrent drag operations.
 	 */
 	public static function refresh_order() {
+		// Don't refresh during AJAX — it would interfere with drag-and-drop saves.
+		if ( wp_doing_ajax() ) {
+			return;
+		}
+
 		$enabled = Bracket_PO_Core::get_enabled_post_types();
 		foreach ( $enabled as $post_type ) {
 			if ( get_transient( 'bracket_po_stale_' . $post_type ) ) {
@@ -116,6 +129,7 @@ class Bracket_PO_Admin {
 			$screen = get_current_screen();
 
 			// Dequeue SCPO scripts to prevent conflict
+			wp_dequeue_script( 'scporderjs' );
 			wp_dequeue_script( 'scporder' );
 			wp_dequeue_script( 'scpo-script' );
 
@@ -192,6 +206,7 @@ class Bracket_PO_Admin {
 			}
 
 			// Dequeue SCPO scripts to prevent conflict
+			wp_dequeue_script( 'scporderjs' );
 			wp_dequeue_script( 'scporder' );
 			wp_dequeue_script( 'scpo-script' );
 

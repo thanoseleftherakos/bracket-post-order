@@ -308,7 +308,6 @@
 				keyboardActiveRow = null;
 
 				// Restore original position
-				var $rows = $list.find('tr');
 				var currentIndex = $row.index();
 				if (currentIndex !== keyboardOriginalIndex) {
 					$row.detach();
@@ -317,8 +316,8 @@
 					} else {
 						$list.find('tr').eq(keyboardOriginalIndex - 1).after($row);
 					}
-					$row.focus();
 				}
+				$row.focus();
 				announce(i18n.keyboard_cancelled || 'Reorder cancelled.');
 				return;
 			}

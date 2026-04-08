@@ -170,10 +170,11 @@ class Bracket_PO_Core {
 		}
 
 		// Re-sequence by current menu_order, then by date/title as tiebreaker.
+		// ID ASC ensures deterministic sort when menu_order and date/title tie.
 		$order_col = esc_sql(
 			( $post_type === 'page' )
-				? 'menu_order ASC, post_title ASC'
-				: 'menu_order ASC, post_date DESC'
+				? 'menu_order ASC, post_title ASC, ID ASC'
+				: 'menu_order ASC, post_date DESC, ID ASC'
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Refresh to fix gaps.

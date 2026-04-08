@@ -26,6 +26,11 @@ class Bracket_PO_Query {
 			return;
 		}
 
+		// Don't override REST API requests.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+
 		$post_type = $query->get( 'post_type' );
 
 		// On frontend taxonomy archives, post_type may be empty.
@@ -112,6 +117,11 @@ class Bracket_PO_Query {
 			return $clauses;
 		}
 
+		// Don't modify REST API queries.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return $clauses;
+		}
+
 		// Only apply when ordering by menu_order.
 		$orderby = $query->get( 'orderby' );
 		if ( $orderby !== 'menu_order' ) {
@@ -161,9 +171,10 @@ class Bracket_PO_Query {
 
 		global $wpdb;
 
-		// Build FIELD() clause — new/unordered posts appear first (by date), then saved order
+		// Build FIELD() clause — ordered posts appear first in saved order,
+		// new/unordered posts appear last sorted by date (newest first).
 		$ids_str = implode( ',', array_map( 'absint', $ordered_ids ) );
-		$clauses['orderby'] = "FIELD({$wpdb->posts}.ID, {$ids_str}) > 0, FIELD({$wpdb->posts}.ID, {$ids_str}) ASC, {$wpdb->posts}.post_date DESC";
+		$clauses['orderby'] = "FIELD({$wpdb->posts}.ID, {$ids_str}) = 0, FIELD({$wpdb->posts}.ID, {$ids_str}) ASC, {$wpdb->posts}.post_date DESC";
 
 		return $clauses;
 	}
@@ -290,7 +301,33 @@ class Bracket_PO_Query {
 			return $orderby;
 		}
 
+		// Verify the term_order column exists to prevent fatal SQL errors.
+		if ( ! self::term_order_column_exists() ) {
+			return $orderby;
+		}
+
 		return 't.term_order';
+	}
+
+	/**
+	 * Check if the term_order column exists in wp_terms.
+	 * Result is cached for the duration of the request.
+	 *
+	 * @return bool
+	 */
+	private static function term_order_column_exists() {
+		static $exists = null;
+
+		if ( $exists !== null ) {
+			return $exists;
+		}
+
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->terms} LIKE 'term_order'" );
+		$exists = ! empty( $row );
+
+		return $exists;
 	}
 
 	/**
@@ -319,16 +356,24 @@ class Bracket_PO_Query {
 			return $terms;
 		}
 
+		// Verify the term_order column exists.
+		if ( ! self::term_order_column_exists() ) {
+			return $terms;
+		}
+
 		// Don't override explicit orderby
 		if ( ! empty( $args['orderby'] ) && $args['orderby'] !== 'term_order' ) {
 			return $terms;
 		}
 
-		// Sort by term_order
+		// Sort by term_order with stable tiebreaker.
 		usort( $terms, function( $a, $b ) {
 			$a_order = isset( $a->term_order ) ? (int) $a->term_order : 0;
 			$b_order = isset( $b->term_order ) ? (int) $b->term_order : 0;
-			return $a_order - $b_order;
+			if ( $a_order !== $b_order ) {
+				return $a_order - $b_order;
+			}
+			return $a->term_id - $b->term_id;
 		} );
 
 		return $terms;

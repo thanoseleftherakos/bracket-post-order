@@ -27,7 +27,8 @@ class Bracket_PO_Ajax {
 			wp_send_json_error( __( 'No order data received.', 'bracket-post-order' ) );
 		}
 
-		parse_str( sanitize_text_field( wp_unslash( $_POST['order'] ) ), $data );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Parsed then sanitized with absint below.
+		parse_str( wp_unslash( $_POST['order'] ), $data );
 
 		if ( empty( $data['post'] ) || ! is_array( $data['post'] ) ) {
 			wp_send_json_error( __( 'Invalid order data.', 'bracket-post-order' ) );
@@ -51,6 +52,13 @@ class Bracket_PO_Ajax {
 		// Collect and sort the existing menu_order values.
 		$order_values = wp_list_pluck( $current_orders, 'menu_order' );
 		sort( $order_values, SORT_NUMERIC );
+
+		// Deduplicate: if there are duplicate menu_order values, generate unique sequential values
+		// starting from the minimum to prevent non-deterministic sort ties.
+		if ( count( $order_values ) !== count( array_unique( $order_values ) ) ) {
+			$min_val = ! empty( $order_values ) ? (int) $order_values[0] : 0;
+			$order_values = range( $min_val, $min_val + count( $post_ids ) - 1 );
+		}
 
 		// Reassign sorted values in the new drag order.
 		foreach ( $post_ids as $i => $post_id ) {
@@ -85,7 +93,8 @@ class Bracket_PO_Ajax {
 			wp_send_json_error( __( 'Missing order data or term ID.', 'bracket-post-order' ) );
 		}
 
-		parse_str( sanitize_text_field( wp_unslash( $_POST['order'] ) ), $data );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Parsed then sanitized with absint below.
+		parse_str( wp_unslash( $_POST['order'] ), $data );
 
 		if ( empty( $data['post'] ) || ! is_array( $data['post'] ) ) {
 			wp_send_json_error( __( 'Invalid order data.', 'bracket-post-order' ) );
@@ -93,6 +102,27 @@ class Bracket_PO_Ajax {
 
 		$term_id  = absint( $_POST['term_id'] );
 		$post_ids = array_map( 'absint', $data['post'] );
+
+		// Validate term belongs to an enabled taxonomy.
+		$term = get_term( $term_id );
+		if ( ! $term || is_wp_error( $term ) ) {
+			wp_send_json_error( __( 'Invalid term.', 'bracket-post-order' ) );
+		}
+
+		$enabled_taxonomies = Bracket_PO_Core::get_enabled_taxonomies();
+		if ( ! in_array( $term->taxonomy, $enabled_taxonomies, true ) ) {
+			wp_send_json_error( __( 'Taxonomy not enabled.', 'bracket-post-order' ) );
+		}
+
+		// Merge with existing saved order so paginated views don't discard other pages.
+		$existing_order = Bracket_PO_Core::get_term_order( $term_id );
+
+		if ( ! empty( $existing_order ) ) {
+			// Remove the visible posts from their old positions in the saved array.
+			$remaining = array_diff( $existing_order, $post_ids );
+			// Append non-visible posts after the reordered visible ones.
+			$post_ids = array_values( array_merge( $post_ids, $remaining ) );
+		}
 
 		update_term_meta( $term_id, '_bracket_po_order', $post_ids );
 
@@ -115,7 +145,8 @@ class Bracket_PO_Ajax {
 			wp_send_json_error( __( 'No order data received.', 'bracket-post-order' ) );
 		}
 
-		parse_str( sanitize_text_field( wp_unslash( $_POST['order'] ) ), $data );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Parsed then sanitized with absint below.
+		parse_str( wp_unslash( $_POST['order'] ), $data );
 
 		if ( empty( $data['tag'] ) || ! is_array( $data['tag'] ) ) {
 			wp_send_json_error( __( 'Invalid order data.', 'bracket-post-order' ) );
@@ -233,7 +264,7 @@ class Bracket_PO_Ajax {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reset requires fresh data.
 			$all_ids = $wpdb->get_col(
 				$wpdb->prepare(
-					"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN ({$placeholders}) ORDER BY {$order_col}",
+					"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN ({$placeholders}) ORDER BY {$order_col}, ID ASC",
 					array_merge( array( $post_type ), $statuses_arr )
 				)
 			);
@@ -248,6 +279,27 @@ class Bracket_PO_Ajax {
 					[ '%d' ]
 				);
 				clean_post_cache( (int) $pid );
+			}
+
+			// Also clear per-term post order for taxonomies linked to this post type.
+			$enabled_taxonomies   = Bracket_PO_Core::get_enabled_taxonomies();
+			$post_type_taxonomies = get_object_taxonomies( $post_type );
+			$taxonomies_to_clear  = array_intersect( $enabled_taxonomies, $post_type_taxonomies );
+
+			if ( ! empty( $taxonomies_to_clear ) ) {
+				foreach ( $taxonomies_to_clear as $taxonomy ) {
+					$terms = get_terms( [
+						'taxonomy'   => $taxonomy,
+						'hide_empty' => false,
+						'fields'     => 'ids',
+					] );
+
+					if ( ! is_wp_error( $terms ) ) {
+						foreach ( $terms as $tid ) {
+							delete_term_meta( $tid, '_bracket_po_order' );
+						}
+					}
+				}
 			}
 
 			/**

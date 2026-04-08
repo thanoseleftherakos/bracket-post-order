@@ -3,7 +3,7 @@ Contributors: bracket
 Tags: post order, custom order, drag and drop, taxonomy order, reorder
 Requires at least: 6.2
 Tested up to: 6.9
-Stable tag: 1.2.3
+Stable tag: 1.2.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -103,7 +103,7 @@ To apply per-term order in custom queries, set `orderby` to `menu_order` and inc
     ] ],
 ] );`
 
-The plugin will automatically apply the saved per-term order via `FIELD()` SQL — posts not in the saved order appear first (newest on top).
+The plugin will automatically apply the saved per-term order via `FIELD()` SQL — ordered posts appear first, new/unordered posts appear last (sorted by date, newest on top).
 
 == Installation ==
 
@@ -189,7 +189,7 @@ Yes. Elementor, Divi, Beaver Builder, and other page builders that use standard 
 
 = What happens when I add a new post to a category that has a custom order? =
 
-New posts that aren't part of the saved per-term order automatically appear first (sorted by date, newest on top). You can then go to the admin, filter by that term, and drag the new post into position.
+New posts that aren't part of the saved per-term order automatically appear last (sorted by date, newest on top). You can then go to the admin, filter by that term, and drag the new post into position.
 
 = Is it compatible with Simple Custom Post Order (SCPO)? =
 
@@ -209,6 +209,25 @@ Yes. The plugin works on individual sites within a multisite network. Each site 
 6. Undo — "Order saved. Undo" notice after every reorder
 
 == Changelog ==
+
+= 1.2.4 =
+* Fixed: Fatal SQL error when term_order column is missing from wp_terms — now gracefully falls back
+* Fixed: Global reset now also clears per-term ordering data to prevent stale order arrays
+* Fixed: Per-term save no longer discards posts on other pages when list is paginated
+* Fixed: SCPO conflict detection now dequeues the correct script handle (scporderjs)
+* Fixed: sanitize_text_field before parse_str could corrupt serialized order data on some servers
+* Fixed: Duplicate menu_order values now resolved to unique sequential values during save
+* Fixed: New posts added to an ordered term now appear last (after ordered posts) instead of first
+* Fixed: Refresh order no longer runs during AJAX requests, preventing mid-drag corruption
+* Fixed: Autosaves and revisions no longer trigger unnecessary menu_order re-sequencing
+* Fixed: Re-sequence sort is now deterministic with ID-based tiebreaker
+* Fixed: WPML per-term ordering now uses actual taxonomy instead of hardcoded 'category'
+* Fixed: PHP usort stable tiebreaker for term_order on PHP < 8.0
+* Fixed: Keyboard Escape handler maintains focus after cancel
+* Improved: term_order column auto-created on admin_init if missing (handles FTP installs)
+* Improved: Admin notice shown if ALTER TABLE fails during activation
+* Improved: REST API queries are no longer affected by the plugin's ordering hooks
+* Improved: Per-term save validates that term belongs to an enabled taxonomy
 
 = 1.2.3 =
 * Fixed: New posts added to a term with per-term ordering now appear first instead of last
@@ -261,6 +280,9 @@ Yes. The plugin works on individual sites within a multisite network. Each site 
 * Full internationalization support with `.pot` template
 
 == Upgrade Notice ==
+
+= 1.2.4 =
+Critical stability release fixing ordering corruption, SQL errors, and pagination data loss. Recommended update for all users.
 
 = 1.1.0 =
 Major feature update: reset order, undo, mobile/touch support, keyboard accessibility, WPML/Polylang compatibility, and performance optimizations. All free.
